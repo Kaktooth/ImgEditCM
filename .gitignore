@@ -30,3 +30,10 @@
 *.exe
 *.out
 *.app
+/.vs
+/.vshistory
+/convolution_matrix/.vshistory
+/convolution_matrix/src/.vshistory/convolution_matrix.cpp/.vshistory/2024-04-13_18_56_14_715.cpp
+/convolution_matrix/src/.vshistory
+/out/build
+/vcpkg_installed
