@@ -1,4 +1,11 @@
+
 #include "GLFW/glfw3.h"
+#define GLFW_EXPOSE_NATIVE_WIN32
+#define NOMINMAX
+#include "GLFW/glfw3native.h"
+#pragma comment(lib, "Dwmapi")
+#include "dwmapi.h"
+
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
@@ -15,17 +22,19 @@
 class Gui {
 
 private:
+    const COLORREF windowTitleColor = 0x211330FF;
     const int displayImageWidth = 1280;
     const int displayImageHeight = 793;
     const int menuOffset = 650;
     const ImVec2 displayResolution = ImVec2(displayImageWidth, displayImageHeight);
     const ImVec4 clearColor = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
+    HWND hwnd;
     int displayWidth, displayHeight = 0;
     float bias[3] = { 0.0, 0.0, 0.0 };
     float threshold[3] = { 1.0, 1.0, 1.0 };
     bool useRandom = true;
-    int matWidth, matHeight;
+    int matWidth, matHeight = 0;
     char inputKernelName[32];
     bool openMatrixCreationWindow = false;
     GLFWwindow* window;
@@ -96,7 +105,9 @@ public:
     void init(int windowWidth, int windowHeight)
     {
         glfwInit();
-        window = glfwCreateWindow(windowWidth, windowHeight, "Image effects with matrix convolution", nullptr, nullptr);
+        window = glfwCreateWindow(windowWidth, windowHeight, "ImgEditCM", nullptr, nullptr);
+        hwnd = glfwGetWin32Window(window);
+        DwmSetWindowAttribute(hwnd, DWMWINDOWATTRIBUTE::DWMWA_USE_IMMERSIVE_DARK_MODE, &windowTitleColor, sizeof(windowTitleColor));
         if (!window) {
             glfwTerminate();
         }
@@ -129,15 +140,15 @@ public:
 
             // Start to draw user interface elements
             {
-                ImGui::Begin("Image effects", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_MenuBar);
+                ImGui::Begin("ImgEditCM", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_MenuBar);
                 if (ImGui::BeginMenuBar()) {
                     if (ImGui::BeginMenu("Image")) {
                         if (ImGui::MenuItem("Open", "Ctrl+O")) {
                             openImage();
                         }
                         if (ImGui::MenuItem("Export", "Ctrl+S")) {
-                            auto savePath = saveFilePath().generic_string();
-                            imgResult->save(savePath.c_str(), PNG);
+                            filesystem::path savePath = saveFilePath();
+                            imgResult->save(savePath);
                         }
                         ImGui::Separator();
                         ImGui::EndMenu();
@@ -240,6 +251,7 @@ public:
                         }
                         ConvolutionMatrix convMat(inputKernelName, matrix);
                         convolutionMatrices.push_back(convMat);
+                        valuesChanged = true;
                     } else {
                         ImGui::Text("Cant create new matrix. You must enter name and width and height != 0");
                     }
@@ -280,7 +292,6 @@ public:
                 if (loadedTexture) {
                     loadedTexture = (void*)(intptr_t)loadTexture();
                 }
-                delete imgResult;
             }
 
             ImGui::End();
