@@ -1,0 +1,12 @@
+{
+  "dependencies": [
+    "glfw3",
+    {
+      "name": "imgui",
+      "features": [ "docking-experimental", "glfw-binding", "opengl3-binding" ],
+      "platform": "(windows & x64)"
+    },
+    "opengl",
+    "stb"
+  ]
+}
