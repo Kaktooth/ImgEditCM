@@ -11,7 +11,6 @@ Features:
 
 ## Showcase 
 
-![](https://github.com/Kaktooth/ImgEditCM/tree/master/convolution_matrix/resources/gif/car_edit.gif)
+<img src="convolution_matrix/resources/gif/car_edit.gif?raw=true" width="500px">
 
-
-![](https://github.com/Kaktooth/ImgEditCM/tree/master/convolution_matrix/resources/gif/bird_edit.gif)
+<img src="convolution_matrix/resources/gif/bird_edit.gif?raw=true" width="500px">
