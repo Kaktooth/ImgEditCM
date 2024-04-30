@@ -14,7 +14,6 @@ void ConvolutionMatrix::filter(Image& image, int redChannelBias, int greenChanne
     if (!enabled)
         return;
 
-    std::stringstream stream;
     std::vector<unsigned char> pixelBuffer;
     auto pixels = image.getPixels();
     auto channels = image.getChannels();
@@ -77,6 +76,120 @@ void ConvolutionMatrix::filter(Image& image, int redChannelBias, int greenChanne
         }
     }
     image.setPixels(pixelBuffer.data());
+}
+
+void ConvolutionMatrix::parallel_filter(Image& image, int redChannelBias, int greenChannelBias, int blueChannelBias, int redChannelThreshold, int greenChannelThreshold, int blueChannelThreshold)
+{
+    if (!enabled)
+        return;
+
+    const int BATCH_SIZE = 8;
+    std::vector<unsigned char> pixelBuffer;
+    auto pixels = image.getStructuredPixels();
+    auto channels = image.getChannels();
+    auto width = image.getWidth();
+    auto height = image.getHeight();
+
+    const bool haveAlpha = channels >= 4;
+
+    __m256 redBias = _mm256_set1_ps(redChannelBias);
+    __m256 greenBias = _mm256_set1_ps(greenChannelBias);
+    __m256 blueBias = _mm256_set1_ps(blueChannelBias);
+    __m256 redThreshold = _mm256_set1_ps(redChannelThreshold);
+    __m256 greenThreshold = _mm256_set1_ps(greenChannelThreshold);
+    __m256 blueThreshold = _mm256_set1_ps(blueChannelThreshold);
+    __m256 pixelValues = _mm256_set1_ps(255);
+    __m256 zeroes = _mm256_setzero_ps();
+    __m256 ones = _mm256_set1_ps(1);
+
+    __m256 kernelSimd[kernel.size()];
+
+    __m256 rowSum[BATCH_SIZE];
+
+    int imageSize = width * height * channels;
+
+    for (int channel = 0; channel < channels; channel++) {
+        int channelOffset = width * height * channel;
+
+        for (int h = 0; h < height; h++) {
+            for (int w = 0; w < width; w += BATCH_SIZE) {
+                // TODO fix bug with image offset. When image is filtered last line of pixels is incorrect.
+                unsigned char* offset = pixels + (w - 1 + h * width);
+                float rows[BATCH_SIZE][8];
+                float pixelsResult[BATCH_SIZE] = { 0 };
+
+                for (int p = 0; p < BATCH_SIZE; p++) {
+                    rowSum[p] = _mm256_setzero_ps();
+
+                    for (int i = 0; i < kernel.size(); i++) {
+                        kernelSimd[i] = _mm256_loadu_ps(kernel[i].data());
+
+                        __m256i loadedPixels = _mm256_cvtepu8_epi32(_mm_lddqu_si128((__m128i*)&offset[channelOffset + p]));
+                        __m256 pixelRow = _mm256_cvtepi32_ps(loadedPixels);
+                        __m256 calculatedRow = _mm256_mul_ps(kernelSimd[i], pixelRow);
+                        rowSum[p] = _mm256_add_ps(rowSum[p], calculatedRow);
+                    }
+
+                    _mm256_storeu_ps(rows[p], rowSum[p]);
+                    for (int ki = 0; ki < kernel.size(); ki++) {
+                        pixelsResult[p] += rows[p][ki];
+                    }
+                }
+
+                __m256 pixelResult = _mm256_set_ps(pixelsResult[7], pixelsResult[6], pixelsResult[5], pixelsResult[4], pixelsResult[3], pixelsResult[2], pixelsResult[1], pixelsResult[0]);
+
+                switch (channel) {
+                case 0:
+                    pixelResult = _mm256_add_ps(pixelResult, redBias);
+                    break;
+                case 1:
+                    pixelResult = _mm256_add_ps(pixelResult, greenBias);
+                    break;
+                case 2:
+                    pixelResult = _mm256_add_ps(pixelResult, blueBias);
+                    break;
+                }
+
+                __m256 threshold;
+                switch (channel) {
+                case 0:
+                    threshold = redThreshold;
+                    break;
+                case 1:
+                    threshold = greenThreshold;
+                    break;
+                case 2:
+                    threshold = blueThreshold;
+                    break;
+                }
+
+                __m256 isGreaterThanThreshold = _mm256_cmp_ps(pixelResult, threshold, _CMP_GT_OS);
+                __m256 isGraterThanZero = _mm256_cmp_ps(pixelResult, zeroes, _CMP_GT_OS);
+                __m256 isLessThanThreshold = _mm256_cmp_ps(pixelResult, threshold, _CMP_LE_OS);
+                __m256 isGreaterThanThresholdAndLessThanZero = _mm256_and_ps(isGraterThanZero, isLessThanThreshold);
+
+                __m256 greaterValues = _mm256_and_ps(pixelResult, isGreaterThanThreshold);
+                __m256 maskedPixelValues = _mm256_and_ps(pixelValues, isGreaterThanThreshold);
+
+                // pixel color normalization
+                __m256 scaledValues = _mm256_div_ps(greaterValues, maskedPixelValues);
+                __m256 normalizedValues = _mm256_div_ps(ones, scaledValues);
+                normalizedValues = _mm256_mul_ps(normalizedValues, maskedPixelValues);
+
+                __m256 normalValues = _mm256_and_ps(pixelResult, isGreaterThanThresholdAndLessThanZero);
+                __m256 mergedValues = _mm256_blendv_ps(normalizedValues, normalValues, isGreaterThanThresholdAndLessThanZero);
+
+                float sum[kernel.size()];
+                _mm256_storeu_ps(sum, mergedValues);
+
+                for (int i = 0; i < BATCH_SIZE; i++) {
+                    pixelBuffer.push_back(sum[i]);
+                }
+            }
+        }
+    }
+
+    image.setStructurePixels(pixelBuffer.data());
 }
 
 std::string ConvolutionMatrix::getKernelName()

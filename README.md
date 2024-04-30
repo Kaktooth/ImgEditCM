@@ -6,7 +6,7 @@ Features:
 - opening and saving image files
 - good looking user interface
 - 10+ different preseted kernels
-- create own matrix kernel up to 10x10 size
+- create own matrix kernel up to 8x8 size
 - control color bias and threshold
 
 ## Showcase 

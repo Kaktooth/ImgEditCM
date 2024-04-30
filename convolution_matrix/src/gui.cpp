@@ -1,3 +1,4 @@
+#define CPU_EXTENTIONS_SUPPORTED (__builtin_cpu_supports("avx2") && __builtin_cpu_supports("f16c"))
 
 #include "GLFW/glfw3.h"
 #define GLFW_EXPOSE_NATIVE_WIN32
@@ -43,7 +44,7 @@ private:
     Image* imgResult = nullptr;
     void* loadedTexture = nullptr;
 
-    GLuint& loadTexture()
+    GLuint loadTexture()
     {
         auto imageChannels = imgResult->getChannels() >= 4 ? GL_RGBA : GL_RGB;
         unsigned char* resisedImageData = imgResult->resize(displayImageWidth, displayImageHeight);
@@ -78,12 +79,14 @@ private:
 
     void openImage()
     {
-        auto openPath = getOpenedFilePath().generic_string();
-
         if (img) {
             delete img;
             delete imgResult;
         }
+
+        auto openPath = getOpenedFilePath().generic_string();
+        if (openPath == "")
+            return;
 
         img = new Image(openPath.c_str());
         imgResult = new Image(*img);
@@ -148,6 +151,9 @@ public:
                         }
                         if (ImGui::MenuItem("Export", "Ctrl+S")) {
                             filesystem::path savePath = saveFilePath();
+                            if (savePath == "")
+                                return;
+
                             imgResult->save(savePath);
                         }
                         ImGui::Separator();
@@ -234,9 +240,9 @@ public:
                 ImGui::InputText("kernelName", inputKernelName, 32);
                 ImGui::SameLine();
                 ImGui::Checkbox("use random?", &useRandom);
-                ImGui::DragInt("Width", &matWidth, 1, 0, 10);
+                ImGui::DragInt("Width", &matWidth, 1, 0, 8);
                 ImGui::SameLine();
-                ImGui::DragInt("Height", &matHeight, 1, 0, 10);
+                ImGui::DragInt("Height", &matHeight, 1, 0, 8);
                 if (ImGui::Button("Create")) {
                     if (inputKernelName[0] != 0 && matWidth != 0 && matHeight != 0) {
                         std::vector<float> row(matWidth);
@@ -284,7 +290,12 @@ public:
                 auto colorBias = lerp(bias);
                 auto colorThreshold = lerp(threshold);
                 for (auto convolutionMatrix : convolutionMatrices) {
+
+#ifdef CPU_EXTENTIONS_SUPPORTED
+                    convolutionMatrix.parallel_filter(*imgResult, colorBias[0], colorBias[1], colorBias[2], colorThreshold[0], colorThreshold[1], colorThreshold[2]);
+#else
                     convolutionMatrix.filter(*imgResult, colorBias[0], colorBias[1], colorBias[2], colorThreshold[0], colorThreshold[1], colorThreshold[2]);
+#endif
                 }
 
                 valuesChanged = false;

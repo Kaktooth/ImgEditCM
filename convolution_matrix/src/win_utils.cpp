@@ -2,64 +2,82 @@
 
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
 
-#include "convolution_matrix_img.h"
 #include <filesystem>
-#include <iostream>
+#include <shobjidl.h>
 #include <string.h>
 #include <windows.h>
 
 using namespace std;
 
-static OPENFILENAMEW createDialog()
+static filesystem::path toFilesystemPath(PWSTR filePath)
 {
-    OPENFILENAMEW ofn;
-    wchar_t file[8192];
-    ZeroMemory(&ofn, sizeof(ofn));
-    ofn.lStructSize = sizeof(ofn);
-    ofn.hwndOwner = NULL;
-    ofn.lpstrFile = file;
-    ofn.lpstrFile[0] = '\0';
-    ofn.lpstrFilter = L"All\0*.*\0png\0*.PNG\0jpg\0*.JPG\0bmp\0*.BMP\0";
-    ofn.nFilterIndex = 1;
-    ofn.lpstrFileTitle = NULL;
-    ofn.nMaxFile = 8192;
-    ofn.nMaxFileTitle = 0;
-    ofn.lpstrInitialDir = NULL;
-    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
-    return ofn;
+    size_t convertedChars = 0;
+    size_t pathLength = wcslen(filePath) + 1;
+    char* charPath = new char[pathLength];
+    wcstombs_s(&convertedChars, charPath, pathLength, filePath, _TRUNCATE);
+    return charPath;
 }
 
 static filesystem::path getOpenedFilePath()
 {
-    try {
-        OPENFILENAMEW openFileName = createDialog();
-        if (GetOpenFileNameW(&openFileName) == TRUE) {
-            filesystem::path filePath = openFileName.lpstrFile;
-            wcout << L"Selected file: " << openFileName.lpstrFile << endl;
+    PWSTR filePath = nullptr;
+    HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+    if (SUCCEEDED(hr)) {
+        IFileOpenDialog* pFileOpen;
 
-            return filePath;
-        } else {
-            cerr << "Open dialog failed or canceled.\n";
+        hr = CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_ALL,
+            IID_IFileOpenDialog, reinterpret_cast<void**>(&pFileOpen));
+
+        if (SUCCEEDED(hr)) {
+            hr = pFileOpen->Show(NULL);
+
+            if (SUCCEEDED(hr)) {
+                IShellItem* pItem;
+                hr = pFileOpen->GetResult(&pItem);
+                if (SUCCEEDED(hr)) {
+                    hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &filePath);
+                    pItem->Release();
+                }
+            }
+            pFileOpen->Release();
         }
-    } catch (exception ex) {
-        cout << ex.what();
+        CoUninitialize();
     }
+
+    if (filePath != nullptr)
+        return toFilesystemPath(filePath);
+
+    return filesystem::path();
 }
 
 static filesystem::path saveFilePath()
 {
-    try {
-        OPENFILENAMEW saveFileName = createDialog();
-        if (GetSaveFileNameW(&saveFileName) == TRUE) {
+    PWSTR filePath = nullptr;
+    HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+    if (SUCCEEDED(hr)) {
+        IFileSaveDialog* pFileSave;
 
-            filesystem::path filePath = saveFileName.lpstrFile;
-            wcout << L"Created file: " << saveFileName.lpstrFile << endl;
+        hr = CoCreateInstance(CLSID_FileSaveDialog, NULL, CLSCTX_ALL,
+            IID_IFileSaveDialog, reinterpret_cast<void**>(&pFileSave));
 
-            return filePath;
-        } else {
-            cerr << "Open dialog failed or canceled.\n";
+        if (SUCCEEDED(hr)) {
+            hr = pFileSave->Show(NULL);
+
+            if (SUCCEEDED(hr)) {
+                IShellItem* pItem;
+                hr = pFileSave->GetResult(&pItem);
+                if (SUCCEEDED(hr)) {
+                    hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &filePath);
+                    pItem->Release();
+                }
+            }
+            pFileSave->Release();
         }
-    } catch (exception ex) {
-        cout << ex.what();
+        CoUninitialize();
     }
+
+    if (filePath != nullptr)
+        return toFilesystemPath(filePath);
+
+    return filesystem::path();
 }

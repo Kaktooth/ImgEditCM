@@ -32,7 +32,7 @@ public:
     }
 
     void filter(Image& image, int redChannelBias, int greenChannelBias, int blueChannelBias, int redThreshold, int greenThreshold, int blueThreshold);
-    void filter_p(Image& image, int redChannelBias, int greenChannelBias, int blueChannelBias, int redThreshold, int greenThreshold, int blueThreshold);
+    void parallel_filter(Image& image, int redChannelBias, int greenChannelBias, int blueChannelBias, int redThreshold, int greenThreshold, int blueThreshold);
     std::string getKernelName();
     std::vector<std::vector<float>> getKernelMatrix();
     std::vector<std::vector<float>>& getModifiableKernelMatrix();
