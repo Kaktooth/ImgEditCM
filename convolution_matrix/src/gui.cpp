@@ -1,5 +1,3 @@
-#define CPU_EXTENTIONS_SUPPORTED (__builtin_cpu_supports("avx2") && __builtin_cpu_supports("f16c"))
-
 #include "GLFW/glfw3.h"
 #define GLFW_EXPOSE_NATIVE_WIN32
 #define NOMINMAX
@@ -289,14 +287,8 @@ public:
 
                 auto colorBias = lerp(bias);
                 auto colorThreshold = lerp(threshold);
-                for (auto convolutionMatrix : convolutionMatrices) {
 
-#ifdef CPU_EXTENTIONS_SUPPORTED
-                    convolutionMatrix.parallel_filter(*imgResult, colorBias[0], colorBias[1], colorBias[2], colorThreshold[0], colorThreshold[1], colorThreshold[2]);
-#else
-                    convolutionMatrix.filter(*imgResult, colorBias[0], colorBias[1], colorBias[2], colorThreshold[0], colorThreshold[1], colorThreshold[2]);
-#endif
-                }
+                ConvolutionMatrix::filter(convolutionMatrices, *imgResult, colorBias, colorThreshold);
 
                 valuesChanged = false;
 

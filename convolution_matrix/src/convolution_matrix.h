@@ -13,6 +13,7 @@
 #include <vector>
 
 class ConvolutionMatrix {
+
 private:
     std::string kernelName;
     std::vector<std::vector<float>> kernel;
@@ -31,7 +32,8 @@ public:
         this->kernel = kernel.second;
     }
 
-    void filter(Image& image, int redChannelBias, int greenChannelBias, int blueChannelBias, int redThreshold, int greenThreshold, int blueThreshold);
+    static void filter(std::vector<ConvolutionMatrix> convolutionMatrices, Image& image, std::array<int, 3> colorBias, std::array<int, 3> colorThreshold);
+    void standard_filter(Image& image, int redChannelBias, int greenChannelBias, int blueChannelBias, int redThreshold, int greenThreshold, int blueThreshold);
     void parallel_filter(Image& image, int redChannelBias, int greenChannelBias, int blueChannelBias, int redThreshold, int greenThreshold, int blueThreshold);
     std::string getKernelName();
     std::vector<std::vector<float>> getKernelMatrix();

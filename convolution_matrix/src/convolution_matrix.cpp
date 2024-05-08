@@ -3,13 +3,28 @@
 
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
 
+#define CPU_EXTENTIONS_SUPPORTED (__builtin_cpu_supports("avx2") && __builtin_cpu_supports("f16c"))
+
 #include "convolution_matrix.h"
+#include <array>
 #include <cmath>
 #include <iostream>
 #include <map>
 #include <sstream>
 
-void ConvolutionMatrix::filter(Image& image, int redChannelBias, int greenChannelBias, int blueChannelBias, int redChannelThreshold, int greenChannelThreshold, int blueChannelThreshold)
+void ConvolutionMatrix::filter(std::vector<ConvolutionMatrix> convolutionMatrices, Image& image, std::array<int, 3> colorBias, std::array<int, 3> colorThreshold)
+{
+    for (auto convolutionMatrix : convolutionMatrices) {
+
+#ifdef CPU_EXTENTIONS_SUPPORTED
+        convolutionMatrix.parallel_filter(image, colorBias[0], colorBias[1], colorBias[2], colorThreshold[0], colorThreshold[1], colorThreshold[2]);
+#else
+        convolutionMatrix.standard_filter(image, colorBias[0], colorBias[1], colorBias[2], colorThreshold[0], colorThreshold[1], colorThreshold[2]);
+#endif
+    }
+}
+
+void ConvolutionMatrix::standard_filter(Image& image, int redChannelBias, int greenChannelBias, int blueChannelBias, int redChannelThreshold, int greenChannelThreshold, int blueChannelThreshold)
 {
     if (!enabled)
         return;
