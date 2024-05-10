@@ -12,6 +12,8 @@
 #include <map>
 #include <sstream>
 
+namespace img_edit_cm {
+
 void ConvolutionMatrix::filter(std::vector<ConvolutionMatrix> convolutionMatrices, Image& image, std::array<int, 3> colorBias, std::array<int, 3> colorThreshold)
 {
     for (auto convolutionMatrix : convolutionMatrices) {
@@ -230,4 +232,5 @@ float& ConvolutionMatrix::getMatrixValue(int row, int col)
 bool ConvolutionMatrix::isEnabled()
 {
     return enabled;
+}
 }

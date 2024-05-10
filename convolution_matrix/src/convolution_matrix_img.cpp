@@ -12,6 +12,8 @@
 #include "stb_image_resize.h"
 #include "stb_image_write.h"
 
+namespace img_edit_cm {
+
 Image::Image() = default;
 
 Image::Image(Image& img)
@@ -137,4 +139,5 @@ int Image::getHeight()
 int Image::getChannels()
 {
     return channels;
+}
 }

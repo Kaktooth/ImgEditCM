@@ -1,6 +1,7 @@
 #pragma once
 #include <filesystem>
 
+namespace img_edit_cm {
 class Image {
 
 private:
@@ -26,3 +27,4 @@ public:
     int getHeight();
     int getChannels();
 };
+}

@@ -18,6 +18,8 @@
 
 #define PARAMETER_CHANGED(inputParameterChanged, isAlreadyChanged) (isAlreadyChanged = inputParameterChanged || isAlreadyChanged)
 
+using namespace img_edit_cm;
+
 class Gui {
 
 private:

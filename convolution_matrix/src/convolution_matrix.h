@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 
+namespace img_edit_cm {
 class ConvolutionMatrix {
 
 private:
@@ -41,3 +42,4 @@ public:
     float& getMatrixValue(int row, int col);
     bool isEnabled();
 };
+}
