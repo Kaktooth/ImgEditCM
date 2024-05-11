@@ -1,8 +1,6 @@
 ﻿# CMakeList.txt : CMake project for ConvolutionMatrix, include source and define
 # project specific logic here.
 #
-cmake_minimum_required(VERSION 3.21)
-SET(CMAKE_CXX_STANDARD 20)
 
 find_package(Stb REQUIRED)
 add_library(img_edit_cm STATIC "src/convolution_matrix.cpp" "src/convolution_matrix.h" "src/convolution_matrix_img.h" "src/convolution_matrix_img.cpp")
