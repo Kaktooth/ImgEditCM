@@ -3,7 +3,7 @@
 
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
 
-#define CPU_EXTENTIONS_SUPPORTED (__builtin_cpu_supports("avx2") && __builtin_cpu_supports("avxvnniint8"))
+#define CPU_EXTENTIONS_SUPPORTED (__builtin_cpu_supports("avx2"))
 
 #include "convolution_matrix.h"
 #include <array>
