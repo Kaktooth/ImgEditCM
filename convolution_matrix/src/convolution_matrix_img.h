@@ -20,7 +20,7 @@ public:
     void save(std::filesystem::path saveResultPath);
     unsigned char* resize(int width, int height);
     void setPixels(unsigned char* pixels);
-    void Image::setStructurePixels(unsigned char* pixels);
+    void setStructurePixels(unsigned char* pixels);
     unsigned char* getPixels();
     unsigned char* getStructuredPixels();
     int getWidth();
