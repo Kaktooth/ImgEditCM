@@ -32,10 +32,10 @@ void ConvolutionMatrix::standard_filter(Image& image, int redChannelBias, int gr
         return;
 
     std::vector<unsigned char> pixelBuffer;
-    auto pixels = image.getPixels();
-    auto channels = image.getChannels();
-    auto width = image.getWidth();
-    auto height = image.getHeight();
+    unsigned char* pixels = image.getPixels();
+    unsigned __int8 channels = image.getChannels();
+    unsigned __int8 width = image.getWidth();
+    unsigned __int8 height = image.getHeight();
 
     const bool haveAlpha = channels >= 4;
 
@@ -53,9 +53,9 @@ void ConvolutionMatrix::standard_filter(Image& image, int redChannelBias, int gr
             for (int ki = w - halfKernelWidth <= 0 ? halfKernelWidth - w : -halfKernelWidth; ki < kernelRemainderWidth && width >= w + kernelRemainderWidth; ki++) {
                 for (int kj = h - halfKernelHeight <= 0 ? halfKernelHeight - h : -halfKernelHeight; kj < kernelRemainderHeight && height >= h + kernelRemainderHeight; kj++) {
                     unsigned char* pixelOffset = pixels + ((w + ki) + width * (h + kj)) * channels;
-                    unsigned char r = pixelOffset[0];
-                    unsigned char g = pixelOffset[1];
-                    unsigned char b = pixelOffset[2];
+                    auto r = pixelOffset[0];
+                    auto g = pixelOffset[1];
+                    auto b = pixelOffset[2];
 
                     auto kernelWidth = ki + halfKernelWidth;
                     auto kernelHeight = kj + halfKernelHeight;
@@ -102,10 +102,10 @@ void ConvolutionMatrix::parallel_filter(Image& image, int redChannelBias, int gr
 
     const int BATCH_SIZE = 8;
     std::vector<unsigned char> pixelBuffer;
-    auto pixels = image.getStructuredPixels();
-    auto channels = image.getChannels();
-    auto width = image.getWidth();
-    auto height = image.getHeight();
+    unsigned char* pixels = image.getStructuredPixels();
+    unsigned __int8 channels = image.getChannels();
+    unsigned __int8 width = image.getWidth();
+    unsigned __int8 height = image.getHeight();
 
     const bool haveAlpha = channels >= 4;
 
