@@ -33,9 +33,9 @@ void ConvolutionMatrix::standard_filter(Image& image, int redChannelBias, int gr
 
     std::vector<unsigned char> pixelBuffer;
     unsigned char* pixels = image.getPixels();
-    unsigned __int8 channels = image.getChannels();
-    unsigned __int8 width = image.getWidth();
-    unsigned __int8 height = image.getHeight();
+    unsigned __int16 channels = image.getChannels();
+    unsigned __int16 width = image.getWidth();
+    unsigned __int16 height = image.getHeight();
 
     const bool haveAlpha = channels >= 4;
 
@@ -103,9 +103,9 @@ void ConvolutionMatrix::parallel_filter(Image& image, int redChannelBias, int gr
     const int BATCH_SIZE = 8;
     std::vector<unsigned char> pixelBuffer;
     unsigned char* pixels = image.getStructuredPixels();
-    unsigned __int8 channels = image.getChannels();
-    unsigned __int8 width = image.getWidth();
-    unsigned __int8 height = image.getHeight();
+    unsigned __int16 channels = image.getChannels();
+    unsigned __int16 width = image.getWidth();
+    unsigned __int16 height = image.getHeight();
 
     const bool haveAlpha = channels >= 4;
 
