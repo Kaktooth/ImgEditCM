@@ -311,7 +311,6 @@ public:
 
             glfwSwapBuffers(window);
         }
-        glfwTerminate();
     }
 
     void
