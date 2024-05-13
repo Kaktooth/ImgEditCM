@@ -8,4 +8,5 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     Gui gui;
     gui.init(1972, 1240);
     gui.draw();
+    gui.clear();
 }
