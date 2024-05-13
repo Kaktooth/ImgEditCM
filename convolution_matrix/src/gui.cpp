@@ -146,10 +146,10 @@ public:
                 ImGui::Begin("ImgEditCM", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_MenuBar);
                 if (ImGui::BeginMenuBar()) {
                     if (ImGui::BeginMenu("Image")) {
-                        if (ImGui::MenuItem("Open", "Ctrl+O")) {
+                        if (ImGui::MenuItem("Open")) {
                             openImage();
                         }
-                        if (ImGui::MenuItem("Export", "Ctrl+S")) {
+                        if (ImGui::MenuItem("Export")) {
                             filesystem::path savePath = saveFilePath();
                             if (savePath == "")
                                 return;
