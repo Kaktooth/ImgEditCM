@@ -39,10 +39,10 @@ void ConvolutionMatrix::standard_filter(Image& image, int redChannelBias, int gr
 
     const bool haveAlpha = channels >= 4;
 
-    unsigned __int8 halfKernelWidth = kernel.size() / 2;
-    unsigned __int8 halfKernelHeight = kernel[0].size() / 2;
-    unsigned __int8 kernelRemainderWidth = kernel.size() - halfKernelWidth;
-    unsigned __int8 kernelRemainderHeight = kernel[0].size() - halfKernelHeight;
+    unsigned __int8 halfKernelWidth = kernel[0].size() / 2;
+    unsigned __int8 halfKernelHeight = kernel.size() / 2;
+    unsigned __int8 kernelRemainderWidth = kernel[0].size() - halfKernelWidth;
+    unsigned __int8 kernelRemainderHeight = kernel.size() - halfKernelHeight;
 
     for (int h = 0; h < height; h++) {
         for (int w = 0; w < width; w++) {
@@ -123,6 +123,11 @@ void ConvolutionMatrix::parallel_filter(Image& image, int redChannelBias, int gr
 
     __m256 rowSum[BATCH_SIZE];
 
+    unsigned __int8 halfKernelWidth = kernel[0].size() / 2;
+    unsigned __int8 halfKernelHeight = kernel.size() / 2;
+    unsigned __int8 kernelRemainderWidth = kernel[0].size() - halfKernelWidth;
+    unsigned __int8 kernelRemainderHeight = kernel.size() - halfKernelHeight;
+
     int imageSize = width * height * channels;
 
     for (int channel = 0; channel < channels; channel++) {
@@ -131,19 +136,18 @@ void ConvolutionMatrix::parallel_filter(Image& image, int redChannelBias, int gr
         for (int h = 0; h < height; h++) {
             for (int w = 0; w < width; w += BATCH_SIZE) {
                 // TODO fix bug with image offset. When image is filtered last line of pixels is incorrect.
-                unsigned char* offset = pixels + (w - 1 + h * width);
+                unsigned char* offset = pixels + (w + h * width);
                 float rows[BATCH_SIZE][8];
                 float pixelsResult[BATCH_SIZE] = { 0 };
 
                 for (int p = 0; p < BATCH_SIZE; p++) {
                     rowSum[p] = _mm256_setzero_ps();
 
-                    for (int i = 0; i < kernel.size(); i++) {
-                        kernelSimd[i] = _mm256_loadu_ps(kernel[i].data());
-
-                        __m256i loadedPixels = _mm256_cvtepu8_epi32(_mm_lddqu_si128((__m128i*)&offset[channelOffset + p]));
+                    for (int kh = 0; kh < kernel.size() && kh < height - h; kh++) {
+                        kernelSimd[kh] = _mm256_loadu_ps(kernel[kh].data());
+                        __m256i loadedPixels = _mm256_cvtepu8_epi32(_mm_lddqu_si128((__m128i*)&offset[channelOffset + p + kh * width]));
                         __m256 pixelRow = _mm256_cvtepi32_ps(loadedPixels);
-                        __m256 calculatedRow = _mm256_mul_ps(kernelSimd[i], pixelRow);
+                        __m256 calculatedRow = _mm256_mul_ps(kernelSimd[kh], pixelRow);
                         rowSum[p] = _mm256_add_ps(rowSum[p], calculatedRow);
                     }
 
