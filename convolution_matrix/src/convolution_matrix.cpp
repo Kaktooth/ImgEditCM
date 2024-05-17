@@ -59,9 +59,9 @@ void ConvolutionMatrix::standard_filter(Image& image, int redChannelBias, int gr
 
                     auto kernelWidth = ki + halfKernelWidth;
                     auto kernelHeight = kj + halfKernelHeight;
-                    calculatedRedChannel += r * kernel[kernelWidth][kernelHeight];
-                    calculatedGreenChannel += g * kernel[kernelWidth][kernelHeight];
-                    calculatedBlueChannel += b * kernel[kernelWidth][kernelHeight];
+                    calculatedRedChannel += r * kernel[kernelHeight][kernelWidth];
+                    calculatedGreenChannel += g * kernel[kernelHeight][kernelWidth];
+                    calculatedBlueChannel += b * kernel[kernelHeight][kernelWidth];
                 }
             }
 
@@ -109,6 +109,8 @@ void ConvolutionMatrix::parallel_filter(Image& image, int redChannelBias, int gr
 
     const bool haveAlpha = channels >= 4;
 
+    int dilation = 0;
+
     __m256 redBias = _mm256_set1_ps(redChannelBias);
     __m256 greenBias = _mm256_set1_ps(greenChannelBias);
     __m256 blueBias = _mm256_set1_ps(blueChannelBias);
@@ -136,11 +138,11 @@ void ConvolutionMatrix::parallel_filter(Image& image, int redChannelBias, int gr
         for (int h = 0; h < height; h++) {
             for (int w = 0; w < width; w += BATCH_SIZE) {
                 // TODO fix bug with image offset. When image is filtered last line of pixels is incorrect.
-                unsigned char* offset = pixels + (w + h * width);
+                unsigned char* offset = pixels + (w - 1 + h * width);
                 float rows[BATCH_SIZE][8];
                 float pixelsResult[BATCH_SIZE] = { 0 };
 
-                for (int p = 0; p < BATCH_SIZE; p++) {
+                for (int p = 0; p < BATCH_SIZE && p + w < width; p++) {
                     rowSum[p] = _mm256_setzero_ps();
 
                     for (int kh = 0; kh < kernel.size() && kh < height - h; kh++) {
@@ -203,7 +205,7 @@ void ConvolutionMatrix::parallel_filter(Image& image, int redChannelBias, int gr
                 float sum[kernel.size()];
                 _mm256_storeu_ps(sum, mergedValues);
 
-                for (int i = 0; i < BATCH_SIZE; i++) {
+                for (int i = 0; i < BATCH_SIZE && i + w < width; i++) {
                     pixelBuffer.push_back(sum[i]);
                 }
             }
