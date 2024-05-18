@@ -36,7 +36,7 @@ private:
     float threshold[3] = { 1.0, 1.0, 1.0 };
     int dilation[2] = { 0, 0 };
     bool useRandom = true;
-    int matWidth, matHeight = 0;
+    int matWidth = 0, matHeight = 0;
     char inputKernelName[32];
     bool openMatrixCreationWindow = false;
     GLFWwindow* window;
