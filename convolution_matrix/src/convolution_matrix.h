@@ -33,9 +33,10 @@ public:
         this->kernel = kernel.second;
     }
 
-    static void filter(std::vector<ConvolutionMatrix> convolutionMatrices, Image& image, std::array<int, 3> colorBias, std::array<int, 3> colorThreshold);
-    void standard_filter(Image& image, int redChannelBias, int greenChannelBias, int blueChannelBias, int redThreshold, int greenThreshold, int blueThreshold);
-    void parallel_filter(Image& image, int redChannelBias, int greenChannelBias, int blueChannelBias, int redThreshold, int greenThreshold, int blueThreshold);
+    static void filter(std::vector<ConvolutionMatrix> convolutionMatrices, Image& image, std::array<int, 3> colorBias, std::array<int, 3> colorThreshold, std::array<int, 2> dilation);
+    void applyKernelDilation(std::array<int, 2> dilation);
+    void sequential_filter(Image& image, std::array<int, 3> colorBias, std::array<int, 3> colorThreshold);
+    void parallel_filter(Image& image, std::array<int, 3> colorBias, std::array<int, 3> colorThreshold);
     std::string getKernelName();
     std::vector<std::vector<float>> getKernelMatrix();
     std::vector<std::vector<float>>& getModifiableKernelMatrix();

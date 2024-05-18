@@ -14,19 +14,19 @@
 
 namespace img_edit_cm {
 
-void ConvolutionMatrix::filter(std::vector<ConvolutionMatrix> convolutionMatrices, Image& image, std::array<int, 3> colorBias, std::array<int, 3> colorThreshold)
+void ConvolutionMatrix::filter(std::vector<ConvolutionMatrix> convolutionMatrices, Image& image, std::array<int, 3> colorBias, std::array<int, 3> colorThreshold, std::array<int, 2> dilation)
 {
     for (auto convolutionMatrix : convolutionMatrices) {
-
+        convolutionMatrix.applyKernelDilation(dilation);
 #ifdef CPU_EXTENTIONS_SUPPORTED
-        convolutionMatrix.parallel_filter(image, colorBias[0], colorBias[1], colorBias[2], colorThreshold[0], colorThreshold[1], colorThreshold[2]);
+        convolutionMatrix.parallel_filter(image, colorBias, colorThreshold);
 #else
-        convolutionMatrix.standard_filter(image, colorBias[0], colorBias[1], colorBias[2], colorThreshold[0], colorThreshold[1], colorThreshold[2]);
+        convolutionMatrix.sequential_filter(image, colorBias, colorThreshold);
 #endif
     }
 }
 
-void ConvolutionMatrix::standard_filter(Image& image, int redChannelBias, int greenChannelBias, int blueChannelBias, int redChannelThreshold, int greenChannelThreshold, int blueChannelThreshold)
+void ConvolutionMatrix::sequential_filter(Image& image, std::array<int, 3> colorBias, std::array<int, 3> colorThreshold)
 {
     if (!enabled)
         return;
@@ -46,13 +46,13 @@ void ConvolutionMatrix::standard_filter(Image& image, int redChannelBias, int gr
 
     for (int h = 0; h < height; h++) {
         for (int w = 0; w < width; w++) {
-            __int16 calculatedRedChannel = redChannelBias;
-            __int16 calculatedGreenChannel = greenChannelBias;
-            __int16 calculatedBlueChannel = blueChannelBias;
+            __int16 calculatedRedChannel = colorBias[0];
+            __int16 calculatedGreenChannel = colorBias[1];
+            __int16 calculatedBlueChannel = colorBias[2];
 
             for (int ki = w - halfKernelWidth <= 0 ? halfKernelWidth - w : -halfKernelWidth; ki < kernelRemainderWidth && width >= w + kernelRemainderWidth; ki++) {
                 for (int kj = h - halfKernelHeight <= 0 ? halfKernelHeight - h : -halfKernelHeight; kj < kernelRemainderHeight && height >= h + kernelRemainderHeight; kj++) {
-                    unsigned char* pixelOffset = pixels + ((w + ki) + width * (h + kj)) * channels;
+                    unsigned char* pixelOffset = pixels + (w + ki + width * (h + kj)) * channels;
                     auto r = pixelOffset[0];
                     auto g = pixelOffset[1];
                     auto b = pixelOffset[2];
@@ -67,17 +67,17 @@ void ConvolutionMatrix::standard_filter(Image& image, int redChannelBias, int gr
 
             // pixel normalization
 
-            if (calculatedRedChannel > redChannelThreshold) {
+            if (calculatedRedChannel > colorThreshold[0]) {
                 calculatedRedChannel = std::lerp(0, 255, calculatedRedChannel / 255);
             } else if (calculatedRedChannel < 0) {
                 calculatedRedChannel = 0;
             }
-            if (calculatedGreenChannel > greenChannelThreshold) {
+            if (calculatedGreenChannel > colorThreshold[1]) {
                 calculatedGreenChannel = std::lerp(0, 255, calculatedGreenChannel / 255);
             } else if (calculatedGreenChannel < 0) {
                 calculatedGreenChannel = 0;
             }
-            if (calculatedBlueChannel > blueChannelThreshold) {
+            if (calculatedBlueChannel > colorThreshold[2]) {
                 calculatedBlueChannel = std::lerp(0, 255, calculatedBlueChannel / 255);
             } else if (calculatedBlueChannel < 0) {
                 calculatedBlueChannel = 0;
@@ -88,14 +88,14 @@ void ConvolutionMatrix::standard_filter(Image& image, int redChannelBias, int gr
             pixelBuffer.push_back(calculatedBlueChannel);
 
             if (haveAlpha) {
-                pixelBuffer.push_back((pixels + ((w) + width * (h)) * channels)[3]);
+                pixelBuffer.push_back((pixels + (w + width * h) * channels)[3]);
             }
         }
     }
     image.setPixels(pixelBuffer.data());
 }
 
-void ConvolutionMatrix::parallel_filter(Image& image, int redChannelBias, int greenChannelBias, int blueChannelBias, int redChannelThreshold, int greenChannelThreshold, int blueChannelThreshold)
+void ConvolutionMatrix::parallel_filter(Image& image, std::array<int, 3> colorBias, std::array<int, 3> colorThreshold)
 {
     if (!enabled)
         return;
@@ -109,14 +109,12 @@ void ConvolutionMatrix::parallel_filter(Image& image, int redChannelBias, int gr
 
     const bool haveAlpha = channels >= 4;
 
-    int dilation = 0;
-
-    __m256 redBias = _mm256_set1_ps(redChannelBias);
-    __m256 greenBias = _mm256_set1_ps(greenChannelBias);
-    __m256 blueBias = _mm256_set1_ps(blueChannelBias);
-    __m256 redThreshold = _mm256_set1_ps(redChannelThreshold);
-    __m256 greenThreshold = _mm256_set1_ps(greenChannelThreshold);
-    __m256 blueThreshold = _mm256_set1_ps(blueChannelThreshold);
+    __m256 redBias = _mm256_set1_ps(colorBias[0]);
+    __m256 greenBias = _mm256_set1_ps(colorBias[1]);
+    __m256 blueBias = _mm256_set1_ps(colorBias[2]);
+    __m256 redThreshold = _mm256_set1_ps(colorThreshold[0]);
+    __m256 greenThreshold = _mm256_set1_ps(colorThreshold[1]);
+    __m256 blueThreshold = _mm256_set1_ps(colorThreshold[2]);
     __m256 pixelValues = _mm256_set1_ps(255);
     __m256 zeroes = _mm256_setzero_ps();
     __m256 ones = _mm256_set1_ps(1);
@@ -138,7 +136,7 @@ void ConvolutionMatrix::parallel_filter(Image& image, int redChannelBias, int gr
         for (int h = 0; h < height; h++) {
             for (int w = 0; w < width; w += BATCH_SIZE) {
                 // TODO fix bug with image offset. When image is filtered last line of pixels is incorrect.
-                unsigned char* offset = pixels + (w - 1 + h * width);
+                unsigned char* offset = pixels + (w + h * width);
                 float rows[BATCH_SIZE][8];
                 float pixelsResult[BATCH_SIZE] = { 0 };
 
@@ -153,9 +151,10 @@ void ConvolutionMatrix::parallel_filter(Image& image, int redChannelBias, int gr
                         rowSum[p] = _mm256_add_ps(rowSum[p], calculatedRow);
                     }
 
+                    // sum the vector in width
                     _mm256_storeu_ps(rows[p], rowSum[p]);
-                    for (int ki = 0; ki < kernel.size(); ki++) {
-                        pixelsResult[p] += rows[p][ki];
+                    for (int kh = 0; kh < kernel[0].size(); kh++) {
+                        pixelsResult[p] += rows[p][kh];
                     }
                 }
 
@@ -213,6 +212,34 @@ void ConvolutionMatrix::parallel_filter(Image& image, int redChannelBias, int gr
     }
 
     image.setStructurePixels(pixelBuffer.data());
+}
+
+void ConvolutionMatrix::applyKernelDilation(std::array<int, 2> dilation)
+{
+    int heightDilation = dilation[0];
+    int widthDilation = dilation[1];
+
+    if (heightDilation > 0 || widthDilation > 0) {
+        int kernelHeight = kernel[0].size();
+        int newKernelWidth = kernel[0].size() * widthDilation;
+        int newKernelHeight = kernel.size() * heightDilation;
+        int kernelDilationEncounters = 1;
+        for (int k = 0; k < kernelHeight; k++) {
+            for (int kernelWidth = 1; kernelWidth < newKernelWidth + 1; kernelWidth += widthDilation + 1) {
+                for (int d = 0; d < widthDilation; d++) {
+                    kernel[k].insert(kernel[k].begin() + kernelWidth + d, 0);
+                }
+            }
+        }
+
+        std::vector<float> zeroes(kernel[0].size());
+        while (kernelDilationEncounters < newKernelHeight) {
+            for (int d = 0; d < heightDilation; d++) {
+                kernel.insert(kernel.begin() + kernelDilationEncounters + d, zeroes);
+            }
+            kernelDilationEncounters += heightDilation + 1;
+        }
+    }
 }
 
 std::string ConvolutionMatrix::getKernelName()

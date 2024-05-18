@@ -34,6 +34,7 @@ private:
     int displayWidth, displayHeight = 0;
     float bias[3] = { 0.0, 0.0, 0.0 };
     float threshold[3] = { 1.0, 1.0, 1.0 };
+    int dilation[2] = { 0, 0 };
     bool useRandom = true;
     int matWidth, matHeight = 0;
     char inputKernelName[32];
@@ -171,135 +172,140 @@ public:
                         valuesChanged = true;
                     }
                 }
-            }
 
-            ImGui::SameLine(viewport->Size.x - menuOffset);
-            ImGui::BeginGroup();
-            {
-                if (ImGui::BeginMenu("Add convolution kernel")) {
-                    if (ImGui::BeginMenu("from existing presets")) {
-                        for (int n = 0; n < kernelPresets.size(); n++) {
-                            if (ImGui::MenuItem(kernelPresets[n].first.c_str())) {
-                                convolutionMatrices.push_back(kernelPresets[n]);
-                                valuesChanged = true;
+                ImGui::SameLine(viewport->Size.x - menuOffset);
+
+                ImGui::BeginGroup();
+                {
+                    if (ImGui::BeginMenu("Add convolution kernel")) {
+                        if (ImGui::BeginMenu("from existing presets")) {
+                            for (int n = 0; n < kernelPresets.size(); n++) {
+                                if (ImGui::MenuItem(kernelPresets[n].first.c_str())) {
+                                    convolutionMatrices.push_back(kernelPresets[n]);
+                                    valuesChanged = true;
+                                }
                             }
+                            ImGui::EndMenu();
                         }
+
+                        if (ImGui::MenuItem("from new matrix")) {
+                            openMatrixCreationWindow = !openMatrixCreationWindow;
+                        }
+
                         ImGui::EndMenu();
                     }
 
-                    if (ImGui::MenuItem("from new matrix")) {
-                        openMatrixCreationWindow = !openMatrixCreationWindow;
-                    }
+                    for (int i = convolutionMatrices.size() - 1; i >= 0; i--) {
 
-                    ImGui::EndMenu();
-                }
+                        auto kernelName = convolutionMatrices[i].getKernelName();
+                        auto popupButtonLabel = "Show Matrix " + kernelName;
+                        auto popupCloseButtonLabel = "Close Matrix " + kernelName;
+                        auto popupLabel = "Matrix Values " + kernelName;
+                        auto tableLabel = "Matrix " + kernelName;
+                        auto removeButtonLabel = "Remove " + kernelName;
+                        auto enableKernelLabel = "enable " + kernelName + '?';
+                        auto equalsName = [kernelName](ConvolutionMatrix convMat) { return convMat.getKernelName() == kernelName; };
+                        auto matrix = convolutionMatrices[i].getModifiableKernelMatrix();
 
-                for (int i = convolutionMatrices.size() - 1; i >= 0; i--) {
+                        ImGui::Text("Kernel: %s", kernelName.c_str());
 
-                    auto kernelName = convolutionMatrices[i].getKernelName();
-                    auto popupButtonLabel = "Show Matrix " + kernelName;
-                    auto popupCloseButtonLabel = "Close Matrix " + kernelName;
-                    auto popupLabel = "Matrix Values " + kernelName;
-                    auto tableLabel = "Matrix " + kernelName;
-                    auto removeButtonLabel = "Remove " + kernelName;
-                    auto enableKernelLabel = "enable " + kernelName + '?';
-                    auto equalsName = [kernelName](ConvolutionMatrix convMat) { return convMat.getKernelName() == kernelName; };
-                    auto matrix = convolutionMatrices[i].getModifiableKernelMatrix();
-
-                    ImGui::Text("Kernel: %s", kernelName.c_str());
-
-                    auto columnSize = matrix[0].size();
-                    if (ImGui::BeginTable(tableLabel.c_str(), columnSize)) {
-                        for (int row = 0; row < matrix.size(); row++) {
-                            ImGui::TableNextRow();
-                            for (int col = 0; col < columnSize; col++) {
-                                ImGui::TableSetColumnIndex(col);
-                                stringstream strStream;
-                                strStream << "##" << kernelName << "_r" << row << "c" << col;
-                                std::string label = strStream.str();
-                                PARAMETER_CHANGED(ImGui::DragFloat(label.c_str(), &convolutionMatrices[i].getMatrixValue(row, col), 0.005f), valuesChanged);
-                            }
-                        }
-                        ImGui::EndTable();
-                    }
-
-                    PARAMETER_CHANGED(ImGui::Checkbox(enableKernelLabel.c_str(), &convolutionMatrices[i].enabled), valuesChanged);
-
-                    ImGui::SameLine();
-                    if (ImGui::Button(removeButtonLabel.c_str())) {
-                        std::erase_if(convolutionMatrices, equalsName);
-                        valuesChanged = true;
-                    }
-                }
-            }
-            ImGui::EndGroup();
-            if (openMatrixCreationWindow) {
-                ImGui::Begin("Matrix Creation", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_Modal | ImGuiViewportFlags_TopMost);
-                ImGui::SetWindowFocus();
-                ImGui::Text("Choose width and height of your matrix");
-                ImGui::InputText("kernelName", inputKernelName, 32);
-                ImGui::SameLine();
-                ImGui::Checkbox("use random?", &useRandom);
-                ImGui::DragInt("Width", &matWidth, 1, 0, 8);
-                ImGui::SameLine();
-                ImGui::DragInt("Height", &matHeight, 1, 0, 8);
-                if (ImGui::Button("Create")) {
-                    if (inputKernelName[0] != 0 && matWidth != 0 && matHeight != 0) {
-                        std::vector<float> row(matWidth);
-                        std::vector<std::vector<float>> matrix(matHeight, row);
-                        if (useRandom) {
-                            for (int i = 0; i < matHeight; i++) {
-                                for (int j = 0; j < matWidth; j++) {
-                                    int number = (1 + std::rand() / ((RAND_MAX + 1u) / 10)) - 5;
-                                    matrix[i][j] = number;
+                        auto columnSize = matrix[0].size();
+                        if (ImGui::BeginTable(tableLabel.c_str(), columnSize)) {
+                            for (int row = 0; row < matrix.size(); row++) {
+                                ImGui::TableNextRow();
+                                for (int col = 0; col < columnSize; col++) {
+                                    ImGui::TableSetColumnIndex(col);
+                                    stringstream strStream;
+                                    strStream << "##" << kernelName << "_r" << row << "c" << col;
+                                    std::string label = strStream.str();
+                                    PARAMETER_CHANGED(ImGui::DragFloat(label.c_str(), &convolutionMatrices[i].getMatrixValue(row, col), 0.005f), valuesChanged);
                                 }
                             }
+                            ImGui::EndTable();
                         }
-                        ConvolutionMatrix convMat(inputKernelName, matrix);
-                        convolutionMatrices.push_back(convMat);
-                        valuesChanged = true;
-                    } else {
-                        ImGui::Text("Cant create new matrix. You must enter name and width and height != 0");
+
+                        PARAMETER_CHANGED(ImGui::Checkbox(enableKernelLabel.c_str(), &convolutionMatrices[i].enabled), valuesChanged);
+
+                        ImGui::SameLine();
+                        if (ImGui::Button(removeButtonLabel.c_str())) {
+                            std::erase_if(convolutionMatrices, equalsName);
+                            valuesChanged = true;
+                        }
                     }
                 }
-                ImGui::SameLine();
-                if (ImGui::Button("Close")) {
-                    openMatrixCreationWindow = false;
+                ImGui::EndGroup();
+                if (openMatrixCreationWindow) {
+                    ImGui::Begin("Matrix Creation", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_Modal | ImGuiViewportFlags_TopMost);
+                    ImGui::SetWindowFocus();
+                    ImGui::Text("Choose width and height of your matrix");
+                    ImGui::InputText("kernelName", inputKernelName, 32);
+                    ImGui::SameLine();
+                    ImGui::Checkbox("use random?", &useRandom);
+                    ImGui::DragInt("Width", &matWidth, 1, 0, 8);
+                    ImGui::SameLine();
+                    ImGui::DragInt("Height", &matHeight, 1, 0, 8);
+                    if (ImGui::Button("Create")) {
+                        if (inputKernelName[0] != 0 && matWidth != 0 && matHeight != 0) {
+                            std::vector<float> row(matWidth);
+                            std::vector<std::vector<float>> matrix(matHeight, row);
+                            if (useRandom) {
+                                for (int i = 0; i < matHeight; i++) {
+                                    for (int j = 0; j < matWidth; j++) {
+                                        int number = (1 + std::rand() / ((RAND_MAX + 1u) / 10)) - 5;
+                                        matrix[i][j] = number;
+                                    }
+                                }
+                            }
+                            ConvolutionMatrix convMat(inputKernelName, matrix);
+                            convolutionMatrices.push_back(convMat);
+                            valuesChanged = true;
+                        } else {
+                            ImGui::Text("Cant create new matrix. You must enter name and width and height != 0");
+                        }
+                    }
+                    ImGui::SameLine();
+                    if (ImGui::Button("Close")) {
+                        openMatrixCreationWindow = false;
+                    }
+
+                    ImGui::End();
                 }
 
+                HelpMarker("Control amount of color to be added to the image.");
+                ImGui::Text("Color bias");
+
+                PARAMETER_CHANGED(ImGui::ColorEdit3(" ", bias), valuesChanged);
+
+                HelpMarker("Filter color from image.");
+                ImGui::Text("Color threshold");
+                PARAMETER_CHANGED(ImGui::ColorEdit3("  ", threshold), valuesChanged);
+
+                HelpMarker("Expand your filters area of effect adding zeroes to the kernel matrix. First value is dilation for height and last for width");
+                ImGui::Text("Dilation");
+                PARAMETER_CHANGED(ImGui::DragInt2("  ", dilation, 1, 0, 5), valuesChanged);
+
+                // if values changed - calculate image convolution using list of kernels
+
+                if (img && valuesChanged && leftMouseButton == GLFW_RELEASE) {
+
+                    imgResult = new Image(*img);
+
+                    ImGui::Text("Calculating image convolution");
+
+                    auto colorBias = lerp(bias);
+                    auto colorThreshold = lerp(threshold);
+                    std::array<int, 2> dilationValues { dilation[0], dilation[1] };
+
+                    ConvolutionMatrix::filter(convolutionMatrices, *imgResult, colorBias, colorThreshold, dilationValues);
+
+                    valuesChanged = false;
+
+                    if (loadedTexture) {
+                        loadedTexture = (void*)(intptr_t)loadTexture();
+                    }
+                }
                 ImGui::End();
             }
-
-            HelpMarker("Control amount of color to be added to the image.");
-            ImGui::Text("Color bias");
-
-            PARAMETER_CHANGED(ImGui::ColorEdit3(" ", bias), valuesChanged);
-
-            HelpMarker("Filter color from image.");
-            ImGui::Text("Color threshold");
-            PARAMETER_CHANGED(ImGui::ColorEdit3("  ", threshold), valuesChanged);
-
-            // if values changed - calculate image convolution using list of kernels
-
-            if (img && valuesChanged && leftMouseButton == GLFW_RELEASE) {
-
-                imgResult = new Image(*img);
-
-                ImGui::Text("Calculating image convolution");
-
-                auto colorBias = lerp(bias);
-                auto colorThreshold = lerp(threshold);
-
-                ConvolutionMatrix::filter(convolutionMatrices, *imgResult, colorBias, colorThreshold);
-
-                valuesChanged = false;
-
-                if (loadedTexture) {
-                    loadedTexture = (void*)(intptr_t)loadTexture();
-                }
-            }
-
-            ImGui::End();
 
             ImGui::Render();
             ImGui::UpdatePlatformWindows();
@@ -313,8 +319,7 @@ public:
         }
     }
 
-    void
-    clear()
+    void clear()
     {
         ImGui_ImplOpenGL3_Shutdown();
         ImGui_ImplGlfw_Shutdown();
