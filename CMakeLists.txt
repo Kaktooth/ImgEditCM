@@ -11,7 +11,7 @@ if (POLICY CMP0141)
 endif()
 
 project ("convolution_matrix")
-include(FetchContent)
+
 # Include sub-projects.
 add_subdirectory ("convolution_matrix")
 

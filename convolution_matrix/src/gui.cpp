@@ -149,6 +149,7 @@ public:
                     if (ImGui::BeginMenu("Image")) {
                         if (ImGui::MenuItem("Open")) {
                             openImage();
+                            valuesChanged = true;
                         }
                         if (ImGui::MenuItem("Export")) {
                             filesystem::path savePath = saveFilePath();
