@@ -13,8 +13,6 @@
 
 #include "convolution_matrix.h"
 #include <array>
-#include <list>
-#include <sstream>
 
 #define PARAMETER_CHANGED(inputParameterChanged, isAlreadyChanged) (isAlreadyChanged = inputParameterChanged || isAlreadyChanged)
 

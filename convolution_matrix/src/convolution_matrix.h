@@ -5,10 +5,8 @@
 // https://pvs-studio.com
 
 #include "convolution_matrix_img.h"
+#include <array>
 #include <immintrin.h>
-#include <iomanip>
-#include <iostream>
-#include <sstream>
 #include <string>
 #include <vector>
 

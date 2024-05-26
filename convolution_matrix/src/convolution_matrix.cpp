@@ -6,11 +6,6 @@
 #define CPU_EXTENTIONS_SUPPORTED (__builtin_cpu_supports("avx2"))
 
 #include "convolution_matrix.h"
-#include <array>
-#include <cmath>
-#include <iostream>
-#include <map>
-#include <sstream>
 
 namespace img_edit_cm {
 
