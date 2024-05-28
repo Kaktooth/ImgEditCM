@@ -120,10 +120,6 @@ void ConvolutionMatrix::parallel_filter(Image& image, std::array<int, 3> colorBi
 
     unsigned __int8 halfKernelWidth = kernel[0].size() / 2;
     unsigned __int8 halfKernelHeight = kernel.size() / 2;
-    unsigned __int8 kernelRemainderWidth = kernel[0].size() - halfKernelWidth;
-    unsigned __int8 kernelRemainderHeight = kernel.size() - halfKernelHeight;
-
-    int imageSize = width * height * channels;
 
     for (int channel = 0; channel < 3; channel++) {
         int channelOffset = width * height * channel;
@@ -206,14 +202,11 @@ void ConvolutionMatrix::parallel_filter(Image& image, std::array<int, 3> colorBi
         }
     }
 
-    int alphaChannelOffset = width * height * 3;
     if (haveAlpha) {
-        for (int h = 0; h < height; h++) {
-            for (int w = 0; w < width; w++) {
-                unsigned char* offset = pixels + (w + h * width);
-                pixelBuffer.push_back(offset[alphaChannelOffset]);
-            }
-        }
+        unsigned char* offset = pixels + width * height * 3;
+        std::vector<unsigned char> alphaChannel(offset, offset + width * height);
+
+        pixelBuffer.insert(pixelBuffer.end(), alphaChannel.begin(), alphaChannel.end());
     }
 
     image.setStructurePixels(pixelBuffer.data());

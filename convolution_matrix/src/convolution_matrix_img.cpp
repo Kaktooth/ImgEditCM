@@ -43,18 +43,15 @@ unsigned char* Image::toRRGGBB(unsigned char* rgb)
 {
     int pixelsNumber = width * height;
     unsigned char* pixels = (unsigned char*)malloc(pixelsNumber * channels * sizeof(char));
-    for (int w = 0; w < width; w++) {
-        for (int h = 0; h < height; h++) {
+    for (int channel = 0; channel < channels; channel++) {
+        int channelOffset = pixelsNumber * channel;
+        for (int w = 0; w < width; w++) {
+            for (int h = 0; h < height; h++) {
+                unsigned char* offset = rgb + (w + width * h) * channels;
+                unsigned char* writeOffset = pixels + (w + width * h) + channelOffset;
 
-            unsigned char* offset = rgb + (w + width * h) * channels;
-
-            unsigned char* redOffset = pixels + (w + width * h);
-            unsigned char* greenOffset = pixels + (w + width * h) + pixelsNumber;
-            unsigned char* blueOffset = pixels + (w + width * h) + pixelsNumber * 2;
-
-            memcpy(&redOffset[0], &offset[0], sizeof(char));
-            memcpy(&greenOffset[0], &offset[1], sizeof(char));
-            memcpy(&blueOffset[0], &offset[2], sizeof(char));
+                memcpy(&writeOffset[0], &offset[channel], sizeof(char));
+            }
         }
     }
 
@@ -66,18 +63,15 @@ unsigned char* Image::toRGB(unsigned char* rrggbb)
 {
     int pixelsNumber = width * height;
     unsigned char* pixels = (unsigned char*)malloc(pixelsNumber * channels * sizeof(char));
+    for (int channel = 0; channel < channels; channel++) {
+        int channelOffset = pixelsNumber * channel;
+        for (int w = 0; w < width; w++) {
+            for (int h = 0; h < height; h++) {
+                unsigned char* newOffset = pixels + (w + width * h) * channels;
+                unsigned char* writeOffset = rrggbb + (w + width * h) + channelOffset;
 
-    for (int w = 0; w < width; w++) {
-        for (int h = 0; h < height; h++) {
-            unsigned char* newOffset = pixels + (w + width * h) * channels;
-
-            unsigned char* redOffset = rrggbb + (w + width * h);
-            unsigned char* greenOffset = rrggbb + (w + width * h) + pixelsNumber;
-            unsigned char* blueOffset = rrggbb + (w + width * h) + pixelsNumber * 2;
-
-            memcpy(&newOffset[0], &redOffset[0], sizeof(char));
-            memcpy(&newOffset[1], &greenOffset[0], sizeof(char));
-            memcpy(&newOffset[2], &blueOffset[0], sizeof(char));
+                memcpy(&newOffset[channel], &writeOffset[0], sizeof(char));
+            }
         }
     }
 
