@@ -1,5 +1,4 @@
-﻿#include <map>
-#include <string>
+﻿#include <string>
 #include <vector>
 
 struct KernelPresets {

@@ -125,7 +125,7 @@ void ConvolutionMatrix::parallel_filter(Image& image, std::array<int, 3> colorBi
 
     int imageSize = width * height * channels;
 
-    for (int channel = 0; channel < channels; channel++) {
+    for (int channel = 0; channel < 3; channel++) {
         int channelOffset = width * height * channel;
 
         for (int h = 0; h < height; h++) {
@@ -202,6 +202,16 @@ void ConvolutionMatrix::parallel_filter(Image& image, std::array<int, 3> colorBi
                 for (int i = 0; i < BATCH_SIZE && i + w < width; i++) {
                     pixelBuffer.push_back(sum[i]);
                 }
+            }
+        }
+    }
+
+    int alphaChannelOffset = width * height * 3;
+    if (haveAlpha) {
+        for (int h = 0; h < height; h++) {
+            for (int w = 0; w < width; w++) {
+                unsigned char* offset = pixels + (w + h * width);
+                pixelBuffer.push_back(offset[alphaChannelOffset]);
             }
         }
     }
